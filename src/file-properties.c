@@ -44,7 +44,14 @@ int compute_file_md5(files_list_entry_t *entry) {
  * @return true if directory exists, false else
  */
 bool directory_exists(char *path_to_dir) {
+    DIR *dir = opendir(path_to_dir);
+    if (dir) {
+        closedir(dir);
+        return true;
+    }
+    return false;
 }
+
 
 /*!
  * @brief is_directory_writable tests if a directory is writable
@@ -53,4 +60,12 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
+    FILE *file = fopen(path_to_dir, "wb");
+    if (file) {
+        fclose(file);
+        remove(path_to_dir);
+        return true;
+    }
+    return false;
 }
+
