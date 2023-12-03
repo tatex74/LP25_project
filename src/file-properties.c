@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <utility.h>
+#include <openssl/md5.h>
 
 /*!
  * @brief get_file_stats gets all of the required information for a file (inc. directories)
@@ -66,7 +67,30 @@ return 0;
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
+    FILE *file = fopen(entry->path_and_name, "rb");
+    if (!file) {
+        perror("Error opening file for MD5 computation");
+        return -1;
+    }
+
+    MD5_CTX md5Context;
+    MD5_Init(&md5Context);
+
+    const size_t bufferSize = 4096;
+    unsigned char buffer[bufferSize];
+    size_t bytesRead;
+
+    while ((bytesRead = fread(buffer, 1, bufferSize, file)) != 0) {
+        MD5_Update(&md5Context, buffer, bytesRead);
+    }
+
+    MD5_Final(entry->md5sum, &md5Context);
+
+    fclose(file);
+
+    return 0;
 }
+
 
 /*!
  * @brief directory_exists tests the existence of a directory
