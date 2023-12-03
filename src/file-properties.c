@@ -27,6 +27,36 @@
  * @return -1 in case of error, 0 else
  */
 int get_file_stats(files_list_entry_t *entry) {
+
+struct stat file_stats;
+
+if(stat(entry->path_and_name, &file_stats)==-1){
+	return -1;
+}
+
+
+if(S_ISREG(file_stats.st_mode)){
+	entry->entry_type = FICHIER;
+	entry->mode = file_stats.st_mode;
+	entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
+	entry->size = file_stats.st_size;
+	
+	if (calculate_md5sum(entry->path_and_name, entry->md5sum) == -1) {
+            return -1;
+        }
+        
+}else if(S_ISDIR(file_stats.st_mode)){
+	entry->entry_type = DOSSIER;
+	entry->mode = file_stats.st_mode;
+	
+}else{
+	printf("Pas un DOSSIER ni un FICHIER");
+	return -1;
+}
+
+return 0;
+
+
 }
 
 /*!
