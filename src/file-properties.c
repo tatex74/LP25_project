@@ -42,9 +42,10 @@ if(S_ISREG(file_stats.st_mode)){
 	entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
 	entry->size = file_stats.st_size;
 	
-	if (calculate_md5sum(entry->path_and_name, entry->md5sum) == -1) {
-            return -1;
-        }
+	if (compute_file_md5(entry) != 0) {
+        fprintf(stderr, "Error computing MD5: %s\n", entry->path_and_name);
+        return -1;
+    	}
         
 }else if(S_ISDIR(file_stats.st_mode)){
 	entry->entry_type = DOSSIER;
