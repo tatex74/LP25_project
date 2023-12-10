@@ -17,7 +17,7 @@ char *concat_path(char *result, char *prefix, char *suffix) {
 	}
 
     	
-  strcpy(result, prefix);
+  	strcpy(result, prefix);
 	strcat(result, suffix);
 	return result;
 }
