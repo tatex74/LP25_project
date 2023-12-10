@@ -82,7 +82,42 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  * @param target is the target dir whose content must be listed
  */
 void make_list(files_list_t *list, char *target) {
+    DIR *dir = open_dir(target);
+    if (!dir) {
+        perror("Error opening directory");
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = get_next_entry(dir)) != NULL) {
+        char entry_path[MAX_PATH];
+        if (concat_path(entry_path, target, entry->d_name) == NULL) {
+            perror("Error building entry path");
+            closedir(dir);
+            return;
+        }
+        if (entry->d_type == DT_REG || entry->d_type == DT_DIR) {
+            // Create and append entry to the list
+            if (list->size < MAX_FILES) {
+                files_list_entry_t *new_entry = (files_list_entry_t *)malloc(sizeof(files_list_entry_t));
+                if (new_entry == NULL) {
+                    perror("Error creating files list entry");
+                    closedir(dir);
+                    return;
+                }
+                strncpy(new_entry->path_and_name, entry_path, MAX_PATH);
+                list->entries[list->size++] = new_entry;
+            } else {
+                perror("Error: files list is full");
+                closedir(dir);
+                return;
+            }
+        }
+    }
+
+    closedir(dir);
 }
+
 
 /*!
  * @brief open_dir opens a dir
