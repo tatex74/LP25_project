@@ -85,6 +85,12 @@ int compute_file_md5(files_list_entry_t *entry) {
         MD5_Update(&md5Context, buffer, bytesRead);
     }
 
+    if (ferror(file) !=0){
+	    perror("Error reading file for MD5 computation");
+	    fclose(file);
+	    return -1;
+    }
+
     MD5_Final(entry->md5sum, &md5Context);
 
     fclose(file);
