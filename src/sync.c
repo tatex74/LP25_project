@@ -83,6 +83,7 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  */
 void make_list(files_list_t *list, char *target) {
     DIR *dir = open_dir(target);
+    
     if (!dir) {
         perror("Error opening directory");
         return;
@@ -97,7 +98,7 @@ void make_list(files_list_t *list, char *target) {
             return;
         }
         if (entry->d_type == DT_REG || entry->d_type == DT_DIR) {
-            // Create and append entry to the list
+    
             if (list->size < MAX_FILES) {
                 files_list_entry_t *new_entry = (files_list_entry_t *)malloc(sizeof(files_list_entry_t));
                 if (new_entry == NULL) {
