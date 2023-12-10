@@ -31,11 +31,11 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
-    if (strcmp(lhd->name, rhd->name) != 0) {
+    if (strcmp(lhd->path_and_name, rhd->path_and_name) != 0) {
         return true;
     }
     if (has_md5) {
-        if (memcmp(lhd->md5sum, rhd->md5sum, MD5_DIGEST_LENGTH) != 0) {
+        if (memcmp(lhd->md5sum, rhd->md5sum, MD5_BIGEST_LENGTH) != 0) {
             return true;
         }
     }
@@ -52,6 +52,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  * @param target_path is the path whose files to list
  */
 void make_files_list(files_list_t *list, char *target_path) {
+    
 }
 
 /*!
@@ -98,4 +99,9 @@ DIR *open_dir(char *path) {
  * Relevant entries are all regular files and dir, except . and ..
  */
 struct dirent *get_next_entry(DIR *dir) {
+    if (dir == NULL) {
+        return NULL;
+    } else {
+        return readdir(dir);
+    }
 }
