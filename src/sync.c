@@ -83,12 +83,11 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
  
-    char source_path[10000];  
-    char destination_path[10000]="chemin de la destination";  
+    char source_path[PATH_SIZE];  
+    char destination_path[PATH_SIZE]="chemin de la destination";  
 
     //construit le chemin en concaténant le chemin source et le nom du fichier, stocké dans source_path
-    snprintf(source_path, sizeof(source_path), "%s/%s", the_config->source, source_entry->path_and_name);
-
+    concat_path(source_path, the_config->source, source_entry->path_and_name);
    
     char *file_name = strrchr(source_entry->path_and_name, '/');
     if (file_name == NULL) {
@@ -97,8 +96,8 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
         file_name++; 
     }
     //construit le chemin en concaténant le chemin du fichier de destination et le nom du fichier, stocké dans destination_path
-    snprintf(destination_path, sizeof(destination_path), "%s/%s", the_config->destination, file_name);
-
+    concat_path(destination_path, the_config->destination, file_name);
+    
     // open the source file for reading
     int source_file = open(source_path, O_RDONLY);
     if (source_file == -1) {
