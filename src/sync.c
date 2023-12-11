@@ -10,7 +10,7 @@
 #include <sys/sendfile.h>
 #include <unistd.h>
 #include <sys/msg.h>
-
+#include <utime.h>
 #include <stdio.h>
 
 /*!
@@ -82,6 +82,70 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
+ 
+    char source_path[10000];  
+    char destination_path[10000]="chemin de la destination";  
+
+    //construit le chemin en concaténant le chemin source et le nom du fichier, stocké dans source_path
+    snprintf(source_path, sizeof(source_path), "%s/%s", the_config->source, source_entry->path_and_name);
+
+   
+    char *file_name = strrchr(source_entry->path_and_name, '/');
+    if (file_name == NULL) {
+        file_name = source_entry->path_and_name;
+    } else {
+        file_name++; 
+    }
+    //construit le chemin en concaténant le chemin du fichier de destination et le nom du fichier, stocké dans destination_path
+    snprintf(destination_path, sizeof(destination_path), "%s/%s", the_config->destination, file_name);
+
+    // open the source file for reading
+    int source_file = open(source_path, O_RDONLY);
+    if (source_file == -1) {
+        printf("Error opening source file");
+        return;
+    }
+
+    char destination_directory[100000];
+    strncpy(destination_directory, destination_path, sizeof(destination_directory));
+    char *last_slash = strrchr(destination_directory, '/');
+    if (last_slash != NULL) {
+        *last_slash = '\0'; 
+    }
+
+    // create the destination directory
+    if (mkdir(destination_directory, S_IRWXU) == -1) {
+    // S_IRWXU: propriétaire a des permissions de lecture, écriture et exécution
+        printf("Error creating destination directory");
+        close(source_file);
+        return;
+    }
+
+    // open the destination file
+    int destination_file = open(destination_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
+    // O_WRONLY: fichier doit être ouvert en mode écriture seulement 
+    // O_CREAT: crée le fichier s'il n'existe pas
+    // O_TRUNC: tronque le fichier à zéro s'il existe
+    if (destination_file == -1) {
+        printf("Error opening destination file");
+        close(source_file);
+        return;
+    }
+
+    // copie des infos du fichier
+    off_t offset = 0;
+    ssize_t bytes_copied = sendfile(destination_file, source_file, &offset, source_entry->size);
+
+    if (bytes_copied == -1) {
+        printf("Error copying file");
+    } else {
+        
+        struct utimbuf times = {source_entry->mtime.tv_sec, source_entry->mtime.tv_nsec / 1000};
+        utime(destination_path, &times);
+    }
+
+    close(source_file);
+    close(destination_file);
 }
 
 /*!
