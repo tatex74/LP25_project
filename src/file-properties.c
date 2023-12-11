@@ -121,12 +121,10 @@ bool directory_exists(char *path_to_dir) {
  * Hint: try to open a file in write mode in the target directory.
  */
 bool is_directory_writable(char *path_to_dir) {
-    FILE *file = fopen(path_to_dir, "wb");
-    if (file) {
-        fclose(file);
-        remove(path_to_dir);
-        return true;
+    if (access(path_to_dir, W_OK) != -1) {
+        return true; // Directory is writable
+    } else {
+        return false;
     }
-    return false;
 }
 
