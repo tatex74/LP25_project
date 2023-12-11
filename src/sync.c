@@ -52,7 +52,17 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
  * @param target_path is the path whose files to list
  */
 void make_files_list(files_list_t *list, char *target_path) {
+    if (list == NULL || target_path == NULL) {
+        return;
+    }
+
+    make_list(list, target_path);
     
+    files_list_entry_t *p_entry = list->head;
+    while (p_entry != NULL) {
+        get_file_stats(p_entry);
+        p_entry = p_entry->next;
+    }
 }
 
 /*!
@@ -82,37 +92,24 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
  * @param target is the target dir whose content must be listed
  */
 void make_list(files_list_t *list, char *target) {
-    DIR *dir = open_dir(target);
-    
-    if (!dir) {
-        perror("Error opening directory");
+    if (list == NULL || target == NULL) {
         return;
     }
 
-    struct dirent *entry;
-    while ((entry = get_next_entry(dir)) != NULL) {
-        char entry_path[MAX_PATH];
-        if (concat_path(entry_path, target, entry->d_name) == NULL) {
-            perror("Error building entry path");
-            closedir(dir);
-            return;
-        }
-        if (entry->d_type == DT_REG || entry->d_type == DT_DIR) {
+    DIR *dir = opendir(target);
     
-            if (list->size < MAX_FILES) {
-                files_list_entry_t *new_entry = (files_list_entry_t *)malloc(sizeof(files_list_entry_t));
-                if (new_entry == NULL) {
-                    perror("Error creating files list entry");
-                    closedir(dir);
-                    return;
-                }
-                strncpy(new_entry->path_and_name, entry_path, MAX_PATH);
-                list->entries[list->size++] = new_entry;
-            } else {
-                perror("Error: files list is full");
-                closedir(dir);
-                return;
-            }
+    if (!dir) {
+        fprintf(stderr, "Error opening directory\n");
+        return;
+    }
+
+    struct dirent *dp;
+
+    while ((dp = readdir(dir)) != NULL) {
+        if (dp->d_type == DT_REG) {
+            add_file_entry(list, concat_path(NULL, target, dp->d_name));
+        } else if (dp->d_type == DT_DIR) {
+            make_list(list, concat_path(NULL, target, dp->d_name));
         }
     }
 

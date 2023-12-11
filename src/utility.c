@@ -12,12 +12,27 @@
  */
 char *concat_path(char *result, char *prefix, char *suffix) {
         
-	if (result == NULL || prefix == NULL || suffix == NULL) {
+	if (prefix == NULL || suffix == NULL) {
 		return NULL;
 	}
 
-    	
-  	strcpy(result, prefix);
-	strcat(result, suffix);
+	//check if prefix and by /
+	int i = 0;
+	while (prefix[i] != '\0') {
+		i++;
+	}
+	if (prefix[i-1] != '/') {
+		strcat(prefix, "/");
+	}
+
+	if (result == NULL) {
+		char result[PATH_SIZE] = (char*) malloc(sizeof(char)*PATH_SIZE);
+	}
+
+	if (strlen(prefix) + strlen(suffix) < PATH_SIZE-1) {
+		strcpy(result, prefix);
+		strcat(result, suffix);
+	}
+
 	return result;
 }

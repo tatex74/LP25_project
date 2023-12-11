@@ -2,3 +2,4 @@ obj/*
 .vscode/
 .vscode/*
 lp25-backup
+src/test.c

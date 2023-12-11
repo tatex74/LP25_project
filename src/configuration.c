@@ -53,7 +53,7 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
 		{.name=0,.has_arg=0,.flag=0,.val=0},
 	};
     
-	while((opt = getopt_long(argc, argv, "n:v", long_opts, NULL)) != -1) {
+	while((opt = getopt_long(argc, argv, "s:d:n:v", long_opts, NULL)) != -1) {
 		switch (opt) {
 			case 'o':
                 the_config->uses_md5 = false;
