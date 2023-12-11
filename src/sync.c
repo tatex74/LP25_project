@@ -147,6 +147,17 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     close(destination_file);
 }
 
+
+/*!
+ * @brief copy_entry_to_destination copies a file from the source to the destination
+ * It keeps access modes and mtime (@see utimensat)
+ * Pay attention to the path so that the prefixes are not repeated from the source to the destination
+ * Use sendfile to copy the file, mkdir to create the directory
+ */
+void new_copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
+
+}
+
 /*!
  * @brief make_list lists files in a location (it recurses in directories)
  * It doesn't get files properties, only a list of paths

@@ -29,34 +29,34 @@
  */
 int get_file_stats(files_list_entry_t *entry) {
 
-struct stat file_stats;
+    struct stat file_stats;
 
-if(stat(entry->path_and_name, &file_stats)==-1){
-	return -1;
-}
-
-
-if(S_ISREG(file_stats.st_mode)){
-	entry->entry_type = FICHIER;
-	entry->mode = file_stats.st_mode;
-	entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
-	entry->size = file_stats.st_size;
-	
-	if (compute_file_md5(entry) != 0) {
-        fprintf(stderr, "Error computing MD5: %s\n", entry->path_and_name);
+    if(stat(entry->path_and_name, &file_stats)==-1){
         return -1;
-    	}
-        
-}else if(S_ISDIR(file_stats.st_mode)){
-	entry->entry_type = DOSSIER;
-	entry->mode = file_stats.st_mode;
-	
-}else{
-	printf("Pas un DOSSIER ni un FICHIER");
-	return -1;
-}
+    }
 
-return 0;
+
+    if(S_ISREG(file_stats.st_mode)){
+        entry->entry_type = FICHIER;
+        entry->mode = file_stats.st_mode;
+        entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
+        entry->size = file_stats.st_size;
+        
+        if (compute_file_md5(entry) != 0) {
+            fprintf(stderr, "Error computing MD5: %s\n", entry->path_and_name);
+            return -1;
+            }
+            
+    }else if(S_ISDIR(file_stats.st_mode)){
+        entry->entry_type = DOSSIER;
+        entry->mode = file_stats.st_mode;
+        
+    }else{
+        printf("Pas un DOSSIER ni un FICHIER");
+        return -1;
+    }
+
+    return 0;
 
 
 }
