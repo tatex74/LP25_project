@@ -73,6 +73,34 @@ void make_files_list(files_list_t *list, char *target_path) {
  * @param msg_queue is the id of the MQ used for communication
  */
 void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, configuration_t *the_config, int msg_queue) {
+    send_analyze_dir_command(msg_queue, MSG_TYPE_TO_SOURCE_LISTER, the_config->source);
+    send_analyze_dir_command(msg_queue, MSG_TYPE_TO_DESTINATION_LISTER, the_config->destination);
+
+    any_message_t message;
+
+    char src_code;
+    char dst_code;
+
+    do {
+        msgrcv(msg_queue, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+        if (message.list_entry.op_code == COMMAND_CODE_FILE_ENTRY) {
+            if (message.list_entry.reply_to == SOURCE) {
+                add_file_entry(src_list, message.list_entry.payload.path_and_name);
+            }
+            else if (message.list_entry.reply_to == DESTINATION) {
+                add_file_entry(dst_list, message.list_entry.payload.path_and_name);
+            }
+        }
+        else if (message.list_entry.op_code == COMMAND_CODE_LIST_COMPLETE) {
+            if (message.list_entry.reply_to == SOURCE) {
+                src_code = COMMAND_CODE_LIST_COMPLETE;
+            }
+            else if (message.list_entry.op_code == DESTINATION) {
+                dst_code = COMMAND_CODE_LIST_COMPLETE;
+            }
+        }
+    }
+    while (src_code != COMMAND_CODE_LIST_COMPLETE || dst_code != COMMAND_CODE_ANALYZE_DIR);    
 }
 
 /*!
@@ -147,16 +175,6 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     close(destination_file);
 }
 
-
-/*!
- * @brief copy_entry_to_destination copies a file from the source to the destination
- * It keeps access modes and mtime (@see utimensat)
- * Pay attention to the path so that the prefixes are not repeated from the source to the destination
- * Use sendfile to copy the file, mkdir to create the directory
- */
-void new_copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
-
-}
 
 /*!
  * @brief make_list lists files in a location (it recurses in directories)

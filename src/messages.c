@@ -14,6 +14,13 @@
  * Used by the specialized functions send_analyze*
  */
 int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry, int cmd_code) {
+    any_message_t message;
+    message.list_entry.mtype = recipient;
+    message.list_entry.op_code = cmd_code;
+    message.list_entry.payload = *file_entry;
+    message.list_entry.reply_to = msg_queue;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
 }
 
 /*!
@@ -24,6 +31,12 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
  * @return the result of msgsnd
  */
 int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
+    any_message_t message;
+    message.analyze_dir_command.mtype = recipient;
+    strcpy(message.analyze_dir_command.target, target_dir);
+    message.analyze_dir_command.op_code = COMMAND_CODE_ANALYZE_DIR;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
 }
 
 // The 3 following functions are one-liners
@@ -37,6 +50,7 @@ int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
  * Calls send_file_entry function
  */
 int send_analyze_file_command(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_ANALYZE_FILE);
 }
 
 /*!
@@ -48,6 +62,7 @@ int send_analyze_file_command(int msg_queue, int recipient, files_list_entry_t *
  * Calls send_file_entry function
  */
 int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_FILE_ANALYZED);
 }
 
 /*!
@@ -59,6 +74,7 @@ int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t 
  * Calls send_file_entry function
  */
 int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_FILE_ENTRY);
 }
 
 /*!
@@ -68,6 +84,12 @@ int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *fi
  * @return the result of msgsnd
  */
 int send_list_end(int msg_queue, int recipient) {
+    any_message_t message;
+    message.list_entry.mtype = recipient;
+    message.list_entry.op_code = COMMAND_CODE_LIST_COMPLETE;
+    message.list_entry.reply_to = msg_queue;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
 }
 
 /*!
@@ -77,6 +99,11 @@ int send_list_end(int msg_queue, int recipient) {
  * @return the result of msgsnd
  */
 int send_terminate_command(int msg_queue, int recipient) {
+    any_message_t message;
+    message.simple_command.mtype = recipient;
+    message.simple_command.message = COMMAND_CODE_TERMINATE;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
 }
 
 /*!
@@ -86,4 +113,9 @@ int send_terminate_command(int msg_queue, int recipient) {
  * @return the result of msgsnd
  */
 int send_terminate_confirm(int msg_queue, int recipient) {
+    any_message_t message;
+    message.simple_command.mtype = recipient;
+    message.simple_command.message = COMMAND_CODE_TERMINATE_OK;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
 }

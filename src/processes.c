@@ -16,6 +16,48 @@
  * @return 0 if all went good, -1 else
  */
 int prepare(configuration_t *the_config, process_context_t *p_context) {
+    if (the_config != NULL && the_config->is_parallel == true) {
+        p_context->shared_key = ftok("LP25_project", 'B');
+        p_context->message_queue_id = msgget(p_context->shared_key, 0666 | IPC_CREAT);
+        p_context->main_process_pid = getpid();
+
+        lister_configuration_t *src_lister_parameters;
+        src_lister_parameters->analyzers_count = (the_config->processes_count-2)/2;
+        src_lister_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        src_lister_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_LISTER;
+        src_lister_parameters->mq_key = p_context->shared_key;
+        p_context->source_lister_pid = make_process(p_context, lister_process_loop, src_lister_parameters);
+
+        lister_configuration_t *dst_lister_parameters;
+        dst_lister_parameters->analyzers_count = (the_config->processes_count-2)/2;
+        dst_lister_parameters->my_recipient_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
+        dst_lister_parameters->my_receiver_id = MSG_TYPE_TO_DESTINATION_LISTER;
+        dst_lister_parameters->mq_key = p_context->shared_key;
+        p_context->destination_lister_pid = make_process(p_context, lister_process_loop, dst_lister_parameters);
+
+        analyzer_configuration_t *src_analyser_parameters;
+        src_analyser_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
+        src_analyser_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        src_analyser_parameters->mq_key = p_context->shared_key;
+        src_analyser_parameters->use_md5 = the_config->uses_md5;   
+        p_context->source_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
+        for (int i=0; i<(the_config->processes_count-2)/2; i++) {
+            p_context->source_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, src_analyser_parameters);
+        }
+
+        analyzer_configuration_t *dst_analyser_parameters;
+        dst_analyser_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
+        dst_analyser_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        dst_analyser_parameters->mq_key = p_context->shared_key;
+        dst_analyser_parameters->use_md5 = the_config->uses_md5;   
+        p_context->destination_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
+        for (int i=0; i<(the_config->processes_count-2)/2; i++) {
+            p_context->destination_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, dst_analyser_parameters);
+        }
+
+    }
+
+    return 0;
 }
 
 /*!
@@ -26,6 +68,15 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
  * @return the PID of the child process (it never returns in the child process)
  */
 int make_process(process_context_t *p_context, process_loop_t func, void *parameters) {
+    pid_t pid = fork();
+
+    if (pid == 0) {
+        func(parameters);
+    }
+    else {
+        p_context->processes_count++;
+        return pid;
+    }
 }
 
 /*!
@@ -33,6 +84,51 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
  * @param parameters is a pointer to its parameters, to be cast to a lister_configuration_t
  */
 void lister_process_loop(void *parameters) {
+    lister_configuration_t* config = (lister_configuration_t*) parameters;
+    any_message_t message;
+
+    files_list_t list;
+    list.head = NULL;
+    list.tail = NULL;
+
+    files_list_entry_t *p_entry;
+    int working_analyser = 0;
+
+    int mq_id = msgget(config->mq_key, 0666);
+
+    do {
+        if (msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0) != -1) {
+            if (message.analyze_file_command.op_code == COMMAND_CODE_ANALYZE_DIR) {
+                //list file of the target directory
+                make_list(&list, message.analyze_dir_command.target);
+                
+                // analyse each file
+                p_entry = list.head;
+                while (p_entry != NULL) {
+                    while (p_entry != NULL && working_analyser < config->analyzers_count) {
+                        send_analyze_file_command(mq_id, config->my_recipient_id, p_entry);
+                        p_entry = p_entry->next;
+                        working_analyser++;
+                    }
+                    while (working_analyser > 0) {
+                        msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0);
+                        working_analyser--;
+                    }
+                }
+
+                // send each entry to main
+                p_entry = list.head;
+                while (p_entry != NULL) {
+                    send_files_list_element(mq_id, MSG_TYPE_TO_MAIN, p_entry);
+                    p_entry = p_entry->next;
+                }
+                send_list_end(mq_id, MSG_TYPE_TO_MAIN);
+            }
+        }
+    }
+    while (message.simple_command.message != COMMAND_CODE_TERMINATE);
+
+    send_terminate_confirm(mq_id, config->my_recipient_id);
 }
 
 /*!
@@ -40,6 +136,22 @@ void lister_process_loop(void *parameters) {
  * @param parameters is a pointer to its parameters, to be cast to an analyzer_configuration_t
  */
 void analyzer_process_loop(void *parameters) {
+    analyzer_configuration_t* config = (analyzer_configuration_t*) parameters;
+    any_message_t message;
+
+    int mq_id = msgget(config->mq_key, 0666);
+
+    do {
+        if(msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0) != -1) {
+            if (message.analyze_file_command.op_code == COMMAND_CODE_ANALYZE_FILE) {
+                get_file_stats(&message.analyze_file_command.payload);
+                send_analyze_file_response(mq_id, config->my_recipient_id, &message.analyze_file_command.payload);
+            }
+        }
+    }
+    while (message.simple_command.message != COMMAND_CODE_TERMINATE);
+
+    send_terminate_confirm(mq_id, config->my_recipient_id);
 }
 
 /*!
