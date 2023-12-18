@@ -16,12 +16,6 @@
  * @return 0 if all went good, -1 else
  */
 int prepare(configuration_t *the_config, process_context_t *p_context) {
-    if (the_config == NULL || p_context == NULL){
-        return -1;
-    }
-    if (the_config->is_parallel){
-        
-    }
 }
 
 /*!
