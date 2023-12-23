@@ -21,18 +21,33 @@
  * @param p_context is a pointer to the processes context
  */
 void synchronize(configuration_t *the_config, process_context_t *p_context) {
-        if (the_config == NULL || p_context == NULL) {
+    if (the_config == NULL || p_context == NULL) {
         printf("Pointeur de configuration ou de contexte de processus non valide.\n");
         return;
     }
     files_list_t source;
     files_list_t dest;
+    files_list_t diff;
     if (the_config->is_parallel) {
         make_files_lists_parallel(&source, &dest, the_config, p_context->message_queue_id);
     } else {
         make_files_list(&source, the_config->source);
         make_files_list(&dest, the_config->destination);
     }
+    files_list_entry_t *src_entry = source.head;
+    files_list_entry_t *dest_entry = dest.head;
+        
+    while (src_entry != NULL && dest_entry != NULL) {
+        bool different = mismatch(src_entry, dest_entry, the_config->uses_md5);
+
+        if (different) {
+            add_entry_to_tail(&diff, src_entry);
+        }
+
+        src_entry = src_entry->next;
+        dst_entry = dst_entry->next;
+    }
+
 
 }
 
