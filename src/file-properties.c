@@ -40,6 +40,7 @@ int get_file_stats(files_list_entry_t *entry) {
         entry->entry_type = FICHIER;
         entry->mode = file_stats.st_mode;
         entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
+	entry->mtime.tv_sec = file_stats.st_mtim.tv_sec;
         entry->size = file_stats.st_size;
         
         if (compute_file_md5(entry) != 0) {
