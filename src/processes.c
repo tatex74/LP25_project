@@ -160,6 +160,34 @@ void analyzer_process_loop(void *parameters) {
  * @param p_context is a pointer to the processes context
  */
 void clean_processes(configuration_t *the_config, process_context_t *p_context) {
+    if (the_config == NULL || p_context == NULL) {
+        fprintf(stderr, "Invalid pointers provided to clean_processes function.\n");
+        return;
+    }
+    send_terminate_command(p_context->message_queue_id, p_context->source_lister_pid);
+    send_terminate_command(p_context->message_queue_id, p_context->destination_lister_pid);
+
+    for (int i = 0; i < p_context->processes_count; i++) {
+        send_terminate_command(p_context->message_queue_id, p_context->source_analyzers_pids[i]);
+        send_terminate_command(p_context->message_queue_id, p_context->destination_analyzers_pids[i]);
+    }
+
+    int status;
+    waitpid(p_context->source_lister_pid, &status, 0);
+    waitpid(p_context->destination_lister_pid, &status, 0);
+
+    for (int i = 0; i < p_context->processes_count; i++) {
+        waitpid(p_context->source_analyzers_pids[i], &status, 0);
+        waitpid(p_context->destination_analyzers_pids[i], &status, 0);
+    }
+
+    free(p_context->source_analyzers_pids);
+    free(p_context->destination_analyzers_pids);
+
+    if (msgctl(p_context->message_queue_id, IPC_RMID, NULL) == -1) {
+        fprintf(stderr, "Error in removing message queue\n");
+    }
+
     // Do nothing if not parallel
     // Send terminate
     // Wait for responses
