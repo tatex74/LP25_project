@@ -17,7 +17,7 @@
  */
 int prepare(configuration_t *the_config, process_context_t *p_context) {
     if (the_config != NULL && the_config->is_parallel == true) {
-        p_context->shared_key = ftok("LP25_project", 'B');
+        p_context->shared_key = ftok("LP25_project", 25);
         p_context->message_queue_id = msgget(p_context->shared_key, 0666 | IPC_CREAT);
         p_context->main_process_pid = getpid();
 
@@ -46,8 +46,8 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         }
 
         analyzer_configuration_t *dst_analyser_parameters;
-        dst_analyser_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
-        dst_analyser_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        dst_analyser_parameters->my_recipient_id = MSG_TYPE_TO_DESTINATION_LISTER;
+        dst_analyser_parameters->my_receiver_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
         dst_analyser_parameters->mq_key = p_context->shared_key;
         dst_analyser_parameters->use_md5 = the_config->uses_md5;   
         p_context->destination_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
