@@ -216,7 +216,7 @@ void make_list(files_list_t *list, char *target) {
         return;
     }
 
-    DIR *dir = opendir(target);
+    DIR *dir = open_dir(target);
     
     if (!dir) {
         fprintf(stderr, "Error opening directory\n");
@@ -243,6 +243,10 @@ void make_list(files_list_t *list, char *target) {
  * @return a pointer to a dir, NULL if it cannot be opened
  */
 DIR *open_dir(char *path) {
+    if(path==NULL){
+        return NULL;
+    }
+    return opendir(path);
 }
 
 /*!
