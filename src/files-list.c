@@ -105,12 +105,17 @@ int add_entry_to_tail(files_list_t *list, files_list_entry_t *entry) {
 files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size_t start_of_src, size_t start_of_dest) {
     files_list_entry_t *p_entry = list->head;
 
-    while (p_entry != NULL && strcmp(p_entry->path_and_name, file_path) != 0) {
-        p_entry = p_entry->next;
+    while (p_entry != NULL){
+        if strcmp(p_entry->path_and_name, file_path) == 0) {
+        return p_entry;
+        }
+        else if strcmp(p_entry->path_and_name, file_path) > 0){
+        break;
+        }
+    p_entry = p_entry->next;
     }
-
-    return p_entry;
-}
+    return NULL;
+   }
 
 /*!
  * @brief display_files_list displays a files list
