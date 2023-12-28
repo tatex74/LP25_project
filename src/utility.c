@@ -17,21 +17,17 @@ char *concat_path(char *result, char *prefix, char *suffix) {
 	}
 
 	//check if prefix and by /
-	int i = 0;
-	while (prefix[i] != '\0') {
-		i++;
-	}
-	if (prefix[i-1] != '/') {
-		strcat(prefix, "/");
-	}
-
-	if (result == NULL) {
-		char result[PATH_SIZE] = (char*) malloc(sizeof(char)*PATH_SIZE);
-	}
-
-	if (strlen(prefix) + strlen(suffix) < PATH_SIZE-1) {
-		strcpy(result, prefix);
+	if (strlen(prefix) > 0 && prefix[strlen(prefix) - 1] != '/') {
+        	strcat(result, prefix);
+        	strcat(result, "/");
+    	} else {
+        	strcpy(result, prefix);
+    	}
+	
+	if (strlen(result) + strlen(suffix) < PATH_SIZE-1) {
 		strcat(result, suffix);
+	}else{
+		return NULL;
 	}
 
 	return result;
