@@ -110,7 +110,7 @@ bool directory_exists(char *path_to_dir) {
 		return false;
     	}
 
-    	DIR *dir = open_dir(path_to_dir);
+    	DIR *dir = opendir(path_to_dir);
     	if (dir) {
         	closedir(dir);
         	return true;
