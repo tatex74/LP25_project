@@ -59,12 +59,11 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
-    if (strcmp(lhd->path_and_name, rhd->path_and_name) != 0) {
-        return true;
-    }
     if (has_md5) {
-        if (memcmp(lhd->md5sum, rhd->md5sum, MD5_BIGEST_LENGTH) != 0) {
-            return true;
+        for (int i = 0; i < 16; i++) {
+            if (lhd->md5sum[i] != rhd->md5sum[i]) {
+                return true;
+            }
         }
     }
     if (lhd->size != rhd->size || lhd->mtime.tv_nsec != rhd->mtime.tv_nsec) {
@@ -128,7 +127,7 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
             }
         }
     }
-    while (src_code != COMMAND_CODE_LIST_COMPLETE || dst_code != COMMAND_CODE_ANALYZE_DIR);    
+    while (src_code != COMMAND_CODE_LIST_COMPLETE || dst_code != COMMAND_CODE_LIST_COMPLETE);    
 }
 
 /*!
@@ -259,6 +258,10 @@ struct dirent *get_next_entry(DIR *dir) {
     if (dir == NULL) {
         return NULL;
     } else {
+        struct dirent *next_entry = readdir(dir);
+        while (next_entry != NULL && (next_entry->d_name == "." || next_entry->d_name == "..")) {
+            next_entry = readdir(dir);
+        }
         return readdir(dir);
     }
 }

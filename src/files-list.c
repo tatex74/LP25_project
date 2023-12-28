@@ -35,9 +35,12 @@ int add_file_entry(files_list_t *list, char *file_path) {
 
     files_list_entry_t *new_entry = (files_list_entry_t*) malloc(sizeof(files_list_entry_t));
     strcpy(new_entry->path_and_name, file_path);
+    new_entry->next = NULL;
+    new_entry->prev = NULL;
 
     if (list->head == NULL) {
         list->head = new_entry;
+        list->tail = new_entry;
         return 0;
     }
 
