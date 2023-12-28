@@ -45,7 +45,7 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         }
 
         src_entry = src_entry->next;
-        dst_entry = dst_entry->next;
+        dest_entry = dest_entry->next;
     }
 
 
