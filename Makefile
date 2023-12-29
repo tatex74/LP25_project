@@ -1,28 +1,19 @@
 CC = gcc
-CFLAGS = -O2 -Wall
-LDFLAGS=-lcrypto
+CFLAGS = -Iinclude -Wall
 
 OBJ_DIR = obj
 SRC_DIR = src
-INC_DIR = include
 
-INC=-$(INC_DIR)
+SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
+OBJ_FILES = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC_FILES))
 
-TARGET = lp25-backup
+TARGET = main
 
-all: $(TARGET)
+$(TARGET): $(OBJ_FILES) 
+	$(CC) $(CFLAGS) -o $@ $^
 
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC_DIR)/%.h
-	$(CC) $(CFLAGS) $(INC) -c $< -o $@
-
-$(OBJ_DIR)/file-properties.o:  $(SRC_DIR)/file-properties.c $(INC_DIR)/file-properties.h
-	$(CC) $(CFLAGS) -std=c11 $(INC) -c $< -o $@
-
-
-$(TARGET): $(SRC_DIR)/main.c $(OBJ_DIR)/%.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $(INC) -o $@ $^
-
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean : 
-	rm -f $(OBJ_DIR)/* $(TARGET)
+	rm $(OBJ_DIR)/* $(TARGET)
