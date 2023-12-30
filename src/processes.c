@@ -119,10 +119,19 @@ void lister_process_loop(void *parameters) {
                 // send each entry to main
                 p_entry = list.head;
                 while (p_entry != NULL) {
-                    send_files_list_element(mq_id, MSG_TYPE_TO_MAIN, p_entry);
+                    if (config->my_receiver_id == MSG_TYPE_TO_SOURCE_LISTER) {
+                        send_files_source_list_element(mq_id, MSG_TYPE_TO_MAIN, p_entry);
+                    } else {
+                        send_files_destination_list_element(mq_id, MSG_TYPE_TO_MAIN, p_entry);
+                    }
+                    
                     p_entry = p_entry->next;
                 }
-                send_list_end(mq_id, MSG_TYPE_TO_MAIN);
+                if (config->my_receiver_id == MSG_TYPE_TO_SOURCE_LISTER) {
+                    send_source_list_end(mq_id, MSG_TYPE_TO_MAIN);
+                } else {
+                    send_destination_list_end(mq_id, MSG_TYPE_TO_MAIN);
+                }
             }
         }
     }

@@ -105,29 +105,30 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
 
     any_message_t message;
 
-    char src_code;
-    char dst_code;
+    bool src_complete = false;
+    bool dst_complete = false;
 
     do {
         msgrcv(msg_queue, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
-        if (message.list_entry.op_code == COMMAND_CODE_FILE_ENTRY) {
-            if (message.list_entry.reply_to == SOURCE) {
-                add_file_entry(src_list, message.list_entry.payload.path_and_name);
-            }
-            else if (message.list_entry.reply_to == DESTINATION) {
+        switch (message.list_entry.op_code) {
+            case COMMAND_CODE_SOURCE_FILE_ENTRY:
+                 add_file_entry(src_list, message.list_entry.payload.path_and_name);
+                break;
+            case COMMAND_CODE_DESTINATION_FILE_ENTRY:
                 add_file_entry(dst_list, message.list_entry.payload.path_and_name);
-            }
-        }
-        else if (message.list_entry.op_code == COMMAND_CODE_LIST_COMPLETE) {
-            if (message.list_entry.reply_to == SOURCE) {
-                src_code = COMMAND_CODE_LIST_COMPLETE;
-            }
-            else if (message.list_entry.op_code == DESTINATION) {
-                dst_code = COMMAND_CODE_LIST_COMPLETE;
-            }
+                break;
+            case COMMAND_CODE_SOURCE_LIST_COMPLETE:
+                src_complete = true;
+                break;
+            case COMMAND_CODE_DESTINATION_LIST_COMPLETE:
+                dst_complete = true;
+                break;
+            
+            default:
+                break;
         }
     }
-    while (src_code != COMMAND_CODE_LIST_COMPLETE || dst_code != COMMAND_CODE_LIST_COMPLETE);    
+    while (src_complete == false || dst_complete == false);    
 }
 
 /*!

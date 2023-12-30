@@ -8,8 +8,10 @@
 #define COMMAND_CODE_ANALYZE_FILE 0x01
 #define COMMAND_CODE_FILE_ANALYZED 0x11
 #define COMMAND_CODE_ANALYZE_DIR 0x02
-#define COMMAND_CODE_FILE_ENTRY 0x12
-#define COMMAND_CODE_LIST_COMPLETE 0x22
+#define COMMAND_CODE_SOURCE_FILE_ENTRY 0x12
+#define COMMAND_CODE_SOURCE_LIST_COMPLETE 0x22
+#define COMMAND_CODE_DESTINATION_FILE_ENTRY 0x03
+#define COMMAND_CODE_DESTINATION_LIST_COMPLETE 0x13
 
 #define MSG_TYPE_TO_MAIN 1
 #define MSG_TYPE_TO_SOURCE_LISTER 2
@@ -52,7 +54,9 @@ int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir);
 int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry, int cmd_code);
 int send_analyze_file_command(int msg_queue, int recipient, files_list_entry_t *file_entry);
 int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t *file_entry);
-int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry);
-int send_list_end(int msg_queue, int recipient);
+int send_files_source_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry);
+int send_files_destination_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry);
+int send_source_list_end(int msg_queue, int recipient);
+int send_destination_list_end(int msg_queue, int recipient);
 int send_terminate_command(int msg_queue, int recipient);
 int send_terminate_confirm(int msg_queue, int recipient);

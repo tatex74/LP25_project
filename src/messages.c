@@ -73,8 +73,12 @@ int send_analyze_file_response(int msg_queue, int recipient, files_list_entry_t 
  * @return the result of the send_file_entry function
  * Calls send_file_entry function
  */
-int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry) {
-    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_FILE_ENTRY);
+int send_files_source_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_SOURCE_FILE_ENTRY);
+}
+
+int send_files_destination_list_element(int msg_queue, int recipient, files_list_entry_t *file_entry) {
+    return send_file_entry(msg_queue, recipient, file_entry, COMMAND_CODE_DESTINATION_FILE_ENTRY);
 }
 
 /*!
@@ -83,10 +87,19 @@ int send_files_list_element(int msg_queue, int recipient, files_list_entry_t *fi
  * @param recipient is the destination of the message
  * @return the result of msgsnd
  */
-int send_list_end(int msg_queue, int recipient) {
+int send_source_list_end(int msg_queue, int recipient) {
     any_message_t message;
     message.list_entry.mtype = recipient;
-    message.list_entry.op_code = COMMAND_CODE_LIST_COMPLETE;
+    message.list_entry.op_code = COMMAND_CODE_SOURCE_LIST_COMPLETE;
+    message.list_entry.reply_to = msg_queue;
+
+    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+}
+
+int send_destination_list_end(int msg_queue, int recipient) {
+    any_message_t message;
+    message.list_entry.mtype = recipient;
+    message.list_entry.op_code = COMMAND_CODE_DESTINATION_LIST_COMPLETE;
     message.list_entry.reply_to = msg_queue;
 
     return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
