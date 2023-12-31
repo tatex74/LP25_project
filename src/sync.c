@@ -12,6 +12,7 @@
 #include <sys/msg.h>
 #include <utime.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /*!
  * @brief synchronize is the main function for synchronization
@@ -25,30 +26,65 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         printf("Pointeur de configuration ou de contexte de processus non valide.\n");
         return;
     }
-    files_list_t source;
-    files_list_t dest;
-    files_list_t diff;
-    if (the_config->is_parallel) {
-        make_files_lists_parallel(&source, &dest, the_config, p_context->message_queue_id);
+
+    files_list_t source_list = {NULL, NULL};
+    files_list_t dest_list = {NULL, NULL};
+    files_list_t diff_list = {NULL, NULL};
+
+    if (the_config->is_parallel == true) {
+        make_files_lists_parallel(&source_list, &dest_list, the_config, p_context->message_queue_id);
     } else {
-        make_files_list(&source, the_config->source);
-        make_files_list(&dest, the_config->destination);
+        make_files_list(&source_list, the_config->source);
+        make_files_list(&dest_list, the_config->destination);
     }
-    files_list_entry_t *src_entry = source.head;
-    files_list_entry_t *dest_entry = dest.head;
+
+    files_list_entry_t *src_entry = source_list.head;
+    files_list_entry_t *dest_entry = NULL;
+    files_list_entry_t new_entry;
         
-    while (src_entry != NULL && dest_entry != NULL) {
-        bool different = mismatch(src_entry, dest_entry, the_config->uses_md5);
-
-        if (different) {
-            add_entry_to_tail(&diff, src_entry);
+    while (src_entry != NULL) {
+        dest_entry = find_entry_by_name(&dest_list, src_entry->path_and_name, strlen(the_config->source), strlen(the_config->destination));
+        if (dest_entry == NULL || mismatch(src_entry, dest_entry, the_config->uses_md5) == true) {
+            memcpy(&new_entry, src_entry, sizeof(files_list_entry_t));
+            new_entry.next = NULL;
+            new_entry.prev = NULL;
+            add_entry_to_tail(&diff_list, &new_entry);
         }
-
         src_entry = src_entry->next;
-        dest_entry = dest_entry->next;
     }
 
+    display_files_list(&diff_list);
 
+    files_list_entry_t *p_diff = diff_list.head;
+    while (p_diff != NULL) {
+        copy_entry_to_destination(p_diff, the_config);
+        p_diff = p_diff->next;
+    }
+
+    //free all list
+    files_list_entry_t *p_entry = NULL;
+    files_list_entry_t *tmp_entry = NULL;
+
+    p_entry = source_list.head;
+    while (p_entry != NULL) {
+        tmp_entry = p_entry->next;
+        free(p_entry);
+        p_entry = tmp_entry;
+    }
+
+    p_entry = dest_list.head;
+    while (p_entry != NULL) {
+        tmp_entry = p_entry->next;
+        free(p_entry);
+        p_entry = tmp_entry;
+    }
+
+    p_entry = diff_list.head;
+    while (p_entry != NULL) {
+        tmp_entry = p_entry->next;
+        free(p_entry);
+        p_entry = tmp_entry;
+    }
 }
 
 /*!
@@ -66,7 +102,7 @@ bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
             }
         }
     }
-    if (lhd->size != rhd->size || lhd->mtime.tv_nsec != rhd->mtime.tv_nsec) {
+    if (lhd->size != rhd->size || lhd->mtime.tv_nsec != rhd->mtime.tv_nsec || lhd->mtime.tv_sec != rhd->mtime.tv_sec || lhd->mode != rhd->mode) {
         return true;
     }
     return false;
@@ -138,46 +174,19 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
- 
-    char source_path[PATH_SIZE];  
-    char destination_path[PATH_SIZE]="chemin de la destination";  
-
-    //construit le chemin en concaténant le chemin source et le nom du fichier, stocké dans source_path
-    concat_path(source_path, the_config->source, source_entry->path_and_name);
-   
-    char *file_name = strrchr(source_entry->path_and_name, '/');
-    if (file_name == NULL) {
-        file_name = source_entry->path_and_name;
-    } else {
-        file_name++; 
-    }
-    //construit le chemin en concaténant le chemin du fichier de destination et le nom du fichier, stocké dans destination_path
-    concat_path(destination_path, the_config->destination, file_name);
     
     // open the source file for reading
-    int source_file = open(source_path, O_RDONLY);
+    int source_file = open(source_entry->path_and_name, O_RDONLY);
     if (source_file == -1) {
         printf("Error opening source file");
         return;
     }
 
-    char destination_directory[100000];
-    strncpy(destination_directory, destination_path, sizeof(destination_directory));
-    char *last_slash = strrchr(destination_directory, '/');
-    if (last_slash != NULL) {
-        *last_slash = '\0'; 
-    }
-
-    // create the destination directory
-    if (mkdir(destination_directory, S_IRWXU) == -1) {
-    // S_IRWXU: propriétaire a des permissions de lecture, écriture et exécution
-        printf("Error creating destination directory");
-        close(source_file);
-        return;
-    }
+    char dest_entry_path[PATH_SIZE]  = "";
+    concat_path(dest_entry_path, the_config->destination, source_entry->path_and_name + strlen(the_config->source));
 
     // open the destination file
-    int destination_file = open(destination_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
+    int destination_file = open(dest_entry_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
     // O_WRONLY: fichier doit être ouvert en mode écriture seulement 
     // O_CREAT: crée le fichier s'il n'existe pas
     // O_TRUNC: tronque le fichier à zéro s'il existe
@@ -194,13 +203,21 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     if (bytes_copied == -1) {
         printf("Error copying file");
     } else {
-        
-        struct utimbuf times = {source_entry->mtime.tv_sec, source_entry->mtime.tv_nsec / 1000};
-        utime(destination_path, &times);
+        struct timespec new_time[2];
+        new_time[0].tv_nsec = UTIME_NOW;
+        new_time[0].tv_sec = UTIME_NOW;
+        new_time[1].tv_nsec = source_entry->mtime.tv_nsec;
+        new_time[1].tv_sec = source_entry->mtime.tv_sec;
+        if (utimensat(AT_FDCWD, dest_entry_path, new_time, 0) != 0) {
+            fprintf(stderr, "Erreur lors de la modification de l'heure de modification");
+        }
+
+        chmod(dest_entry_path, source_entry->mode);
     }
 
     close(source_file);
     close(destination_file);
+
 }
 
 
@@ -224,13 +241,19 @@ void make_list(files_list_t *list, char *target) {
     }
 
     struct dirent *dp;
+    char path[PATH_SIZE] = "";
 
     while ((dp = readdir(dir)) != NULL) {
         if (dp->d_type == DT_REG) {
-            add_file_entry(list, concat_path(NULL, target, dp->d_name));
-        } else if (dp->d_type == DT_DIR) {
-            make_list(list, concat_path(NULL, target, dp->d_name));
+            if (concat_path(path, target, dp->d_name) != NULL) {
+                add_file_entry(list, path);
+            }
+        } else if (dp->d_type == DT_DIR && strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            if (concat_path(path, target, dp->d_name) != NULL) {
+                make_list(list, path);
+            }
         }
+        strcpy(path, "");
     }
 
     closedir(dir);
@@ -260,7 +283,7 @@ struct dirent *get_next_entry(DIR *dir) {
         return NULL;
     } else {
         struct dirent *next_entry = readdir(dir);
-        while (next_entry != NULL && (next_entry->d_name == "." || next_entry->d_name == "..")) {
+        while (next_entry != NULL && (strcmp(next_entry->d_name, ".") == 0 || strcmp(next_entry->d_name, "..") == 0)) {
             next_entry = readdir(dir);
         }
         return readdir(dir);

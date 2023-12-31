@@ -37,6 +37,8 @@ int add_file_entry(files_list_t *list, char *file_path) {
     strcpy(new_entry->path_and_name, file_path);
     new_entry->next = NULL;
     new_entry->prev = NULL;
+    new_entry->mtime.tv_sec = 0;
+    new_entry->mtime.tv_nsec = 0;
 
     if (list->head == NULL) {
         list->head = new_entry;
@@ -109,13 +111,13 @@ files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size
     files_list_entry_t *p_entry = list->head;
 
     while (p_entry != NULL){
-        if strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) == 0) {
+        if (strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) == 0) {
         return p_entry;
         }
-        else if strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) > 0){
+        else if (strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) > 0){
         break;
         }
-    p_entry = p_entry->next;
+        p_entry = p_entry->next;
     }
     return NULL;
    }

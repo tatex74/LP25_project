@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     synchronize(&my_config, &processes_context);
     
     // Clean resources
-    clean_processes(&my_config, &processes_context);
+    //clean_processes(&my_config, &processes_context);
 
     return 0;
 }

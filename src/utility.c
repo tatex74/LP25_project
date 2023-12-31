@@ -17,7 +17,7 @@ char *concat_path(char *result, char *prefix, char *suffix) {
 	}
 
 	//check if prefix and by /
-	if (strlen(prefix) > 0 && prefix[strlen(prefix) - 1] != '/') {
+	if ((strlen(prefix) > 0 && prefix[strlen(prefix) - 1] != '/') && suffix[0] != '/') {
         	strcat(result, prefix);
         	strcat(result, "/");
     	} else {

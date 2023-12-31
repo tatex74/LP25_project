@@ -35,12 +35,11 @@ int get_file_stats(files_list_entry_t *entry) {
         return -1;
     }
 
-
     if(S_ISREG(file_stats.st_mode)){
         entry->entry_type = FICHIER;
         entry->mode = file_stats.st_mode;
         entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
-	entry->mtime.tv_sec = file_stats.st_mtim.tv_sec;
+	    entry->mtime.tv_sec = file_stats.st_mtim.tv_sec;
         entry->size = file_stats.st_size;
         
         if (compute_file_md5(entry) != 0) {
@@ -59,7 +58,6 @@ int get_file_stats(files_list_entry_t *entry) {
 
     return 0;
 
-
 }
 
 /*!
@@ -69,32 +67,43 @@ int get_file_stats(files_list_entry_t *entry) {
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
-    FILE *file = fopen(entry->path_and_name, "rb");
+    /*FILE *file = fopen(entry->path_and_name, "rb");
     if (!file) {
         perror("Error opening file for MD5 computation");
         return -1;
     }
 
-    MD5_CTX md5Context;
-    MD5_Init(&md5Context);
+    EVP_MD_CTX *mdContext;
+    const EVP_MD *md = EVP_md5(); // Get the MD5 message digest algorithm
+    mdContext = EVP_MD_CTX_new();
+
+    if (mdContext == NULL) {
+        fclose(file);
+        return -1;
+    }
+
+    EVP_DigestInit_ex(mdContext, md, NULL);
 
     const size_t bufferSize = 4096;
     unsigned char buffer[bufferSize];
     size_t bytesRead;
 
     while ((bytesRead = fread(buffer, 1, bufferSize, file)) != 0) {
-        MD5_Update(&md5Context, buffer, bytesRead);
+        EVP_DigestUpdate(mdContext, buffer, bytesRead);
     }
 
-    if (ferror(file) !=0){
-	    perror("Error reading file for MD5 computation");
-	    fclose(file);
-	    return -1;
+    if (ferror(file) != 0) {
+        perror("Error reading file for MD5 computation");
+        fclose(file);
+        EVP_MD_CTX_free(mdContext);
+        return -1;
     }
 
-    MD5_Final(entry->md5sum, &md5Context);
+    EVP_DigestFinal_ex(mdContext, entry->md5sum, NULL);
 
     fclose(file);
+
+    EVP_MD_CTX_free(mdContext);*/
 
     return 0;
 }
@@ -110,7 +119,7 @@ bool directory_exists(char *path_to_dir) {
 		return false;
     	}
 
-    	DIR *dir = open_dir(path_to_dir);
+    	DIR *dir = opendir(path_to_dir);
     	if (dir) {
         	closedir(dir);
         	return true;

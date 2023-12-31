@@ -21,38 +21,38 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         p_context->message_queue_id = msgget(p_context->shared_key, 0666 | IPC_CREAT);
         p_context->main_process_pid = getpid();
 
-        lister_configuration_t *src_lister_parameters;
-        src_lister_parameters->analyzers_count = (the_config->processes_count-2)/2;
-        src_lister_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
-        src_lister_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_LISTER;
-        src_lister_parameters->mq_key = p_context->shared_key;
-        p_context->source_lister_pid = make_process(p_context, lister_process_loop, src_lister_parameters);
+        lister_configuration_t src_lister_parameters;
+        src_lister_parameters.analyzers_count = (the_config->processes_count-2)/2;
+        src_lister_parameters.my_recipient_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        src_lister_parameters.my_receiver_id = MSG_TYPE_TO_SOURCE_LISTER;
+        src_lister_parameters.mq_key = p_context->shared_key;
+        p_context->source_lister_pid = make_process(p_context, lister_process_loop, &src_lister_parameters);
 
-        lister_configuration_t *dst_lister_parameters;
-        dst_lister_parameters->analyzers_count = (the_config->processes_count-2)/2;
-        dst_lister_parameters->my_recipient_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
-        dst_lister_parameters->my_receiver_id = MSG_TYPE_TO_DESTINATION_LISTER;
-        dst_lister_parameters->mq_key = p_context->shared_key;
-        p_context->destination_lister_pid = make_process(p_context, lister_process_loop, dst_lister_parameters);
+        lister_configuration_t dst_lister_parameters;
+        dst_lister_parameters.analyzers_count = (the_config->processes_count-2)/2;
+        dst_lister_parameters.my_recipient_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
+        dst_lister_parameters.my_receiver_id = MSG_TYPE_TO_DESTINATION_LISTER;
+        dst_lister_parameters.mq_key = p_context->shared_key;
+        p_context->destination_lister_pid = make_process(p_context, lister_process_loop, &dst_lister_parameters);
 
-        analyzer_configuration_t *src_analyser_parameters;
-        src_analyser_parameters->my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
-        src_analyser_parameters->my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
-        src_analyser_parameters->mq_key = p_context->shared_key;
-        src_analyser_parameters->use_md5 = the_config->uses_md5;   
+        analyzer_configuration_t src_analyser_parameters;
+        src_analyser_parameters.my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
+        src_analyser_parameters.my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
+        src_analyser_parameters.mq_key = p_context->shared_key;
+        src_analyser_parameters.use_md5 = the_config->uses_md5;   
         p_context->source_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
         for (int i=0; i<(the_config->processes_count-2)/2; i++) {
-            p_context->source_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, src_analyser_parameters);
+            p_context->source_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, &src_analyser_parameters);
         }
 
-        analyzer_configuration_t *dst_analyser_parameters;
-        dst_analyser_parameters->my_recipient_id = MSG_TYPE_TO_DESTINATION_LISTER;
-        dst_analyser_parameters->my_receiver_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
-        dst_analyser_parameters->mq_key = p_context->shared_key;
-        dst_analyser_parameters->use_md5 = the_config->uses_md5;   
+        analyzer_configuration_t dst_analyser_parameters;
+        dst_analyser_parameters.my_recipient_id = MSG_TYPE_TO_DESTINATION_LISTER;
+        dst_analyser_parameters.my_receiver_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
+        dst_analyser_parameters.mq_key = p_context->shared_key;
+        dst_analyser_parameters.use_md5 = the_config->uses_md5;   
         p_context->destination_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
         for (int i=0; i<(the_config->processes_count-2)/2; i++) {
-            p_context->destination_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, dst_analyser_parameters);
+            p_context->destination_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, &dst_analyser_parameters);
         }
 
     }
@@ -173,23 +173,19 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         fprintf(stderr, "Invalid pointers provided to clean_processes function.\n");
         return;
     }
-    send_terminate_command(p_context->message_queue_id, p_context->source_lister_pid);
-    send_terminate_command(p_context->message_queue_id, p_context->destination_lister_pid);
+    send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_LISTER);
+    send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_LISTER);
 
-    for (int i = 0; i < p_context->processes_count; i++) {
-        send_terminate_command(p_context->message_queue_id, p_context->source_analyzers_pids[i]);
-        send_terminate_command(p_context->message_queue_id, p_context->destination_analyzers_pids[i]);
+    for (int i = 0; i < (p_context->processes_count-2)/2; i++) {
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_ANALYZERS);
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_ANALYZERS);
     }
 
-    int status;
-    waitpid(p_context->source_lister_pid, &status, 0);
-    waitpid(p_context->destination_lister_pid, &status, 0);
-
+    any_message_t message;
     for (int i = 0; i < p_context->processes_count; i++) {
-        waitpid(p_context->source_analyzers_pids[i], &status, 0);
-        waitpid(p_context->destination_analyzers_pids[i], &status, 0);
+        msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
     }
-
+    
     free(p_context->source_analyzers_pids);
     free(p_context->destination_analyzers_pids);
 

@@ -3,3 +3,8 @@ obj/*
 .vscode/*
 lp25-backup
 src/test.c
+test/
+test/*
+main
+test_prog/
+test_prog/*
