@@ -35,16 +35,17 @@ int main(int argc, char *argv[]) {
         printf("Destination directory %s is not writable\n", my_config.destination);
         return -1;
     }
+    
 
     // Prepare (fork, MQ) if parallel
     process_context_t processes_context;
     prepare(&my_config, &processes_context);
-
+    
     // Run synchronize:
     synchronize(&my_config, &processes_context);
-    
+
     // Clean resources
-    //clean_processes(&my_config, &processes_context);
+    clean_processes(&my_config, &processes_context);
 
     return 0;
 }

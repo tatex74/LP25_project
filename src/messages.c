@@ -20,7 +20,7 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
     message.list_entry.payload = *file_entry;
     message.list_entry.reply_to = msg_queue;
 
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    return msgsnd(msg_queue, &message, sizeof(files_list_entry_transmit_t) - sizeof(long), 0);
 }
 
 /*!
@@ -31,12 +31,11 @@ int send_file_entry(int msg_queue, int recipient, files_list_entry_t *file_entry
  * @return the result of msgsnd
  */
 int send_analyze_dir_command(int msg_queue, int recipient, char *target_dir) {
-    any_message_t message;
-    message.analyze_dir_command.mtype = recipient;
-    strcpy(message.analyze_dir_command.target, target_dir);
-    message.analyze_dir_command.op_code = COMMAND_CODE_ANALYZE_DIR;
-
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    analyze_dir_command_t message;
+    message.mtype = recipient;
+    strcpy(message.target, target_dir);
+    message.op_code = COMMAND_CODE_ANALYZE_DIR;
+    return msgsnd(msg_queue, &message, sizeof(analyze_dir_command_t) - sizeof(long), 0);
 }
 
 // The 3 following functions are one-liners
@@ -93,7 +92,7 @@ int send_source_list_end(int msg_queue, int recipient) {
     message.list_entry.op_code = COMMAND_CODE_SOURCE_LIST_COMPLETE;
     message.list_entry.reply_to = msg_queue;
 
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    return msgsnd(msg_queue, &message, sizeof(files_list_entry_transmit_t) - sizeof(long), 0);
 }
 
 int send_destination_list_end(int msg_queue, int recipient) {
@@ -102,7 +101,7 @@ int send_destination_list_end(int msg_queue, int recipient) {
     message.list_entry.op_code = COMMAND_CODE_DESTINATION_LIST_COMPLETE;
     message.list_entry.reply_to = msg_queue;
 
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    return msgsnd(msg_queue, &message, sizeof(files_list_entry_transmit_t) - sizeof(long), 0);
 }
 
 /*!
@@ -116,7 +115,7 @@ int send_terminate_command(int msg_queue, int recipient) {
     message.simple_command.mtype = recipient;
     message.simple_command.message = COMMAND_CODE_TERMINATE;
 
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    return msgsnd(msg_queue, &message, sizeof(simple_command_t) - sizeof(long), 0);
 }
 
 /*!
@@ -130,5 +129,5 @@ int send_terminate_confirm(int msg_queue, int recipient) {
     message.simple_command.mtype = recipient;
     message.simple_command.message = COMMAND_CODE_TERMINATE_OK;
 
-    return msgsnd(msg_queue, &message, sizeof(any_message_t) - sizeof(long), 0);
+    return msgsnd(msg_queue, &message, sizeof(simple_command_t) - sizeof(long), 0);
 }

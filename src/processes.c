@@ -17,8 +17,17 @@
  */
 int prepare(configuration_t *the_config, process_context_t *p_context) {
     if (the_config != NULL && the_config->is_parallel == true) {
-        p_context->shared_key = ftok("LP25_project", 25);
+        p_context->shared_key = ftok("LP25_sync", 25);
+        if (p_context->shared_key == -1) {
+            fprintf(stderr, "Error with mqkey\n");
+            return -1;
+        }
         p_context->message_queue_id = msgget(p_context->shared_key, 0666 | IPC_CREAT);
+        if (p_context->message_queue_id == -1) {
+            fprintf(stderr, "Error while creating msgqueue\n");
+            return -1;
+        }
+        p_context->processes_count = 0;
         p_context->main_process_pid = getpid();
 
         lister_configuration_t src_lister_parameters;
@@ -54,7 +63,6 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         for (int i=0; i<(the_config->processes_count-2)/2; i++) {
             p_context->destination_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, &dst_analyser_parameters);
         }
-
     }
 
     return 0;
@@ -92,6 +100,7 @@ void lister_process_loop(void *parameters) {
     list.tail = NULL;
 
     files_list_entry_t *p_entry;
+    files_list_entry_t *p_entry_analysed;
     int working_analyser = 0;
 
     int mq_id = msgget(config->mq_key, 0666);
@@ -104,6 +113,7 @@ void lister_process_loop(void *parameters) {
                 
                 // analyse each file
                 p_entry = list.head;
+                p_entry_analysed = list.head;
                 while (p_entry != NULL) {
                     while (p_entry != NULL && working_analyser < config->analyzers_count) {
                         send_analyze_file_command(mq_id, config->my_recipient_id, p_entry);
@@ -112,6 +122,8 @@ void lister_process_loop(void *parameters) {
                     }
                     while (working_analyser > 0) {
                         msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0);
+                        memcpy(p_entry_analysed, &message.analyze_file_command.payload, sizeof(files_list_entry_t));
+                        p_entry_analysed = p_entry_analysed->next;
                         working_analyser--;
                     }
                 }
@@ -137,7 +149,7 @@ void lister_process_loop(void *parameters) {
     }
     while (message.simple_command.message != COMMAND_CODE_TERMINATE);
 
-    send_terminate_confirm(mq_id, config->my_recipient_id);
+    send_terminate_confirm(mq_id, MSG_TYPE_TO_MAIN);
 }
 
 /*!
@@ -160,7 +172,7 @@ void analyzer_process_loop(void *parameters) {
     }
     while (message.simple_command.message != COMMAND_CODE_TERMINATE);
 
-    send_terminate_confirm(mq_id, config->my_recipient_id);
+    send_terminate_confirm(mq_id, MSG_TYPE_TO_MAIN);
 }
 
 /*!
@@ -173,6 +185,11 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         fprintf(stderr, "Invalid pointers provided to clean_processes function.\n");
         return;
     }
+
+    if (the_config->is_parallel == false) {
+        return;
+    }
+
     send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_LISTER);
     send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_LISTER);
 

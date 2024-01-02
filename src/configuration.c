@@ -27,7 +27,7 @@ void display_help(char *my_name) {
 void init_configuration(configuration_t *the_config) {
     the_config->is_parallel = true;
     the_config->dry_run = false;
-    the_config->processes_count = 0; //valeur à changer car non nulle
+    the_config->processes_count = 4; //valeur à changer car non nulle
     the_config->uses_md5 = true;
     the_config->verbose = false;
     strcpy(the_config->source, "\0");
@@ -77,6 +77,9 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
 
             case 'n':
                 the_config->processes_count = atoi(optarg);
+                if (the_config->processes_count < 4) {
+                    the_config->processes_count = 4;
+                }
                 break;
 
             case 'v':

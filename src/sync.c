@@ -46,13 +46,13 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         dest_entry = find_entry_by_name(&dest_list, src_entry->path_and_name, strlen(the_config->source), strlen(the_config->destination));
         if (dest_entry == NULL || mismatch(src_entry, dest_entry, the_config->uses_md5) == true) {
             memcpy(&new_entry, src_entry, sizeof(files_list_entry_t));
-            new_entry.next = NULL;
-            new_entry.prev = NULL;
             add_entry_to_tail(&diff_list, &new_entry);
         }
         src_entry = src_entry->next;
     }
 
+    //display_files_list(&source_list);
+    //display_files_list(&dest_list);
     display_files_list(&diff_list);
 
     files_list_entry_t *p_diff = diff_list.head;
@@ -95,16 +95,18 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
  * @return true if both files are not equal, false else
  */
 bool mismatch(files_list_entry_t *lhd, files_list_entry_t *rhd, bool has_md5) {
-    if (has_md5) {
+    if (has_md5 == true) {
         for (int i = 0; i < 16; i++) {
             if (lhd->md5sum[i] != rhd->md5sum[i]) {
                 return true;
             }
         }
     }
+
     if (lhd->size != rhd->size || lhd->mtime.tv_nsec != rhd->mtime.tv_nsec || lhd->mtime.tv_sec != rhd->mtime.tv_sec || lhd->mode != rhd->mode) {
         return true;
     }
+
     return false;
 }
 
@@ -144,14 +146,20 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
     bool src_complete = false;
     bool dst_complete = false;
 
+    files_list_entry_t *new_entry = NULL;
+
     do {
         msgrcv(msg_queue, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
         switch (message.list_entry.op_code) {
             case COMMAND_CODE_SOURCE_FILE_ENTRY:
-                 add_file_entry(src_list, message.list_entry.payload.path_and_name);
+                new_entry = (files_list_entry_t*) malloc(sizeof(files_list_entry_t));
+                memcpy(new_entry, &message.list_entry.payload, sizeof(files_list_entry_t));
+                add_entry_to_tail(src_list, new_entry);
                 break;
             case COMMAND_CODE_DESTINATION_FILE_ENTRY:
-                add_file_entry(dst_list, message.list_entry.payload.path_and_name);
+                new_entry = (files_list_entry_t*) malloc(sizeof(files_list_entry_t));
+                memcpy(new_entry, &message.list_entry.payload, sizeof(files_list_entry_t));
+                add_entry_to_tail(dst_list, new_entry);
                 break;
             case COMMAND_CODE_SOURCE_LIST_COMPLETE:
                 src_complete = true;
@@ -164,7 +172,7 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
                 break;
         }
     }
-    while (src_complete == false || dst_complete == false);    
+    while (src_complete == false || dst_complete == false);
 }
 
 /*!
