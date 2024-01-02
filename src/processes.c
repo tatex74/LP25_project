@@ -8,6 +8,7 @@
 #include <sync.h>
 #include <string.h>
 #include <errno.h>
+#include <signal.h>
 
 /*!
  * @brief prepare prepares (only when parallel is enabled) the processes used for the synchronization.
@@ -201,6 +202,13 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
     any_message_t message;
     for (int i = 0; i < p_context->processes_count; i++) {
         msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+    }
+
+    kill(p_context->source_lister_pid, SIGTERM);
+    kill(p_context->destination_lister_pid, SIGTERM);
+    for (int i=0; i<(p_context->processes_count-2)/2; i++) {
+        kill(p_context->source_analyzers_pids[i], SIGTERM);
+        kill(p_context->destination_analyzers_pids[i], SIGTERM);
     }
     
     free(p_context->source_analyzers_pids);
