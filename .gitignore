@@ -1,10 +1,8 @@
 obj/*
 .vscode/
 .vscode/*
-lp25-backup
-src/test.c
+LP25_sync
 test/
 test/*
-main
 test_prog/
 test_prog/*
