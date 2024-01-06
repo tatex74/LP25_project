@@ -81,6 +81,8 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
 
     if (pid == 0) {
         func(parameters);
+        fprintf(stderr, "Error : process return");
+        return -1;
     }
     else {
         p_context->processes_count++;
@@ -151,6 +153,8 @@ void lister_process_loop(void *parameters) {
     while (message.simple_command.message != COMMAND_CODE_TERMINATE);
 
     send_terminate_confirm(mq_id, MSG_TYPE_TO_MAIN);
+
+    exit(EXIT_SUCCESS);
 }
 
 /*!
@@ -174,6 +178,8 @@ void analyzer_process_loop(void *parameters) {
     while (message.simple_command.message != COMMAND_CODE_TERMINATE);
 
     send_terminate_confirm(mq_id, MSG_TYPE_TO_MAIN);
+
+    exit(EXIT_SUCCESS);
 }
 
 /*!
@@ -202,13 +208,6 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
     any_message_t message;
     for (int i = 0; i < p_context->processes_count; i++) {
         msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
-    }
-
-    kill(p_context->source_lister_pid, SIGTERM);
-    kill(p_context->destination_lister_pid, SIGTERM);
-    for (int i=0; i<(p_context->processes_count-2)/2; i++) {
-        kill(p_context->source_analyzers_pids[i], SIGTERM);
-        kill(p_context->destination_analyzers_pids[i], SIGTERM);
     }
     
     free(p_context->source_analyzers_pids);

@@ -39,7 +39,9 @@ int main(int argc, char *argv[]) {
 
     // Prepare (fork, MQ) if parallel
     process_context_t processes_context;
-    prepare(&my_config, &processes_context);
+    if (prepare(&my_config, &processes_context) != 0) {
+        return -1;
+    }
     
     // Run synchronize:
     synchronize(&my_config, &processes_context);

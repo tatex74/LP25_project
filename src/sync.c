@@ -51,9 +51,14 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         src_entry = src_entry->next;
     }
 
-    display_files_list(&source_list);
-    //display_files_list(&dest_list);
-    display_files_list(&diff_list);
+    if (the_config->verbose == true) {
+        puts("Source List :");
+        display_files_list(&source_list);
+        puts("\nDestination List :");
+        display_files_list(&dest_list);
+        puts("\nDifference List:");
+        display_files_list(&diff_list);
+    }
 
     files_list_entry_t *p_diff = diff_list.head;
     while (p_diff != NULL) {
@@ -182,16 +187,20 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
  * Use sendfile to copy the file, mkdir to create the directory
  */
 void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t *the_config) {
+    char dest_entry_path[PATH_SIZE]  = "";
+    concat_path(dest_entry_path, the_config->destination, source_entry->path_and_name + strlen(the_config->source));
     
-    // open the source file for reading
-    int source_file = open(source_entry->path_and_name, O_RDONLY);
-    if (source_file == -1) {
-        printf("Error opening source file");
+    if (the_config->dry_run == true) {
+        printf("%s copied to %s.\n", source_entry->path_and_name, dest_entry_path);
         return;
     }
 
-    char dest_entry_path[PATH_SIZE]  = "";
-    concat_path(dest_entry_path, the_config->destination, source_entry->path_and_name + strlen(the_config->source));
+    // open the source file for reading
+    int source_file = open(source_entry->path_and_name, O_RDONLY);
+    if (source_file == -1) {
+        fprintf(stderr, "Error opening source file");
+        return;
+    }
 
     // open the destination file
     int destination_file = open(dest_entry_path, O_WRONLY | O_CREAT | O_TRUNC, source_entry->mode);
@@ -199,7 +208,7 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     // O_CREAT: crée le fichier s'il n'existe pas
     // O_TRUNC: tronque le fichier à zéro s'il existe
     if (destination_file == -1) {
-        printf("Error opening destination file");
+        fprintf(stderr, "Error opening destination file");
         close(source_file);
         return;
     }
@@ -209,8 +218,11 @@ void copy_entry_to_destination(files_list_entry_t *source_entry, configuration_t
     ssize_t bytes_copied = sendfile(destination_file, source_file, &offset, source_entry->size);
 
     if (bytes_copied == -1) {
-        printf("Error copying file");
+        fprintf(stderr, "Error copying file");
     } else {
+        if (the_config->verbose == true) {
+            printf("%s copied to %s.\n", source_entry->path_and_name, dest_entry_path);
+        }
         struct timespec new_time[2];
         new_time[0].tv_nsec = UTIME_NOW;
         new_time[0].tv_sec = UTIME_NOW;

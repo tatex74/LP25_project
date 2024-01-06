@@ -67,7 +67,7 @@ int get_file_stats(files_list_entry_t *entry) {
  * Use libcrypto functions from openssl/evp.h
  */
 int compute_file_md5(files_list_entry_t *entry) {
-    /*FILE *file = fopen(entry->path_and_name, "rb");
+    FILE *file = fopen(entry->path_and_name, "rb");
     if (!file) {
         perror("Error opening file for MD5 computation");
         return -1;
@@ -103,7 +103,7 @@ int compute_file_md5(files_list_entry_t *entry) {
 
     fclose(file);
 
-    EVP_MD_CTX_free(mdContext);*/
+    EVP_MD_CTX_free(mdContext);
 
     return 0;
 }

@@ -30,8 +30,8 @@ void init_configuration(configuration_t *the_config) {
     the_config->processes_count = 4; //valeur à changer car non nulle
     the_config->uses_md5 = true;
     the_config->verbose = false;
-    strcpy(the_config->source, "\0");
-    strcpy(the_config->destination, "\0");;
+    strcpy(the_config->source, "");
+    strcpy(the_config->destination, "");
 }
 
 /*!
@@ -79,6 +79,9 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
                 the_config->processes_count = atoi(optarg);
                 if (the_config->processes_count < 4) {
                     the_config->processes_count = 4;
+                }
+                if (the_config->processes_count%2 == 1) {
+                    the_config->processes_count--;
                 }
                 break;
 
