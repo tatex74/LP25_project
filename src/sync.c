@@ -66,30 +66,10 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         p_diff = p_diff->next;
     }
 
-    //free all list
-    files_list_entry_t *p_entry = NULL;
-    files_list_entry_t *tmp_entry = NULL;
-
-    p_entry = source_list.head;
-    while (p_entry != NULL) {
-        tmp_entry = p_entry->next;
-        free(p_entry);
-        p_entry = tmp_entry;
-    }
-
-    p_entry = dest_list.head;
-    while (p_entry != NULL) {
-        tmp_entry = p_entry->next;
-        free(p_entry);
-        p_entry = tmp_entry;
-    }
-
-    p_entry = diff_list.head;
-    while (p_entry != NULL) {
-        tmp_entry = p_entry->next;
-        free(p_entry);
-        p_entry = tmp_entry;
-    }
+    
+    clear_files_list(&source_list);
+    clear_files_list(&dest_list);
+    clear_files_list(&diff_list);
 }
 
 /*!
