@@ -161,14 +161,17 @@ void make_files_lists_parallel(files_list_t *src_list, files_list_t *dst_list, c
                 memcpy(new_entry, &message.list_entry.payload, sizeof(files_list_entry_t));
                 add_entry_to_tail(src_list, new_entry);
                 break;
+            
             case COMMAND_CODE_DESTINATION_FILE_ENTRY:
                 new_entry = (files_list_entry_t*) malloc(sizeof(files_list_entry_t));
                 memcpy(new_entry, &message.list_entry.payload, sizeof(files_list_entry_t));
                 add_entry_to_tail(dst_list, new_entry);
                 break;
+            
             case COMMAND_CODE_SOURCE_LIST_COMPLETE:
                 src_complete = true;
                 break;
+            
             case COMMAND_CODE_DESTINATION_LIST_COMPLETE:
                 dst_complete = true;
                 break;
