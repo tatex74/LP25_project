@@ -133,7 +133,7 @@ void display_files_list(files_list_t *list) {
     if (!list)
         return;
     
-    for (files_list_entry_t *cursor=list->head; cursor!=NULL; cursor=cursor->next) {
+    for (files_list_entry_t *cursor = list->head; cursor != NULL; cursor = cursor->next) {
         printf("%s\n", cursor->path_and_name);
     }
 }
@@ -147,7 +147,7 @@ void display_files_list_reversed(files_list_t *list) {
     if (!list)
         return;
     
-    for (files_list_entry_t *cursor=list->tail; cursor!=NULL; cursor=cursor->prev) {
+    for (files_list_entry_t *cursor = list->tail; cursor != NULL; cursor = cursor->prev) {
         printf("%s\n", cursor->path_and_name);
     }
 }
