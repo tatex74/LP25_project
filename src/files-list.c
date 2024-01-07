@@ -114,10 +114,10 @@ files_list_entry_t *find_entry_by_name(files_list_t *list, char *file_path, size
 
     while (p_entry != NULL){
         if (strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) == 0) {
-        return p_entry;
+            return p_entry;
         }
         else if (strcmp(p_entry->path_and_name + start_of_dest, file_path + start_of_src) > 0){
-        break;
+            break;
         }
         p_entry = p_entry->next;
     }
