@@ -28,7 +28,6 @@ void clear_files_list(files_list_t *list) {
  *  @return 0 if success, -1 else (out of memory)
  */
 int add_file_entry(files_list_t *list, char *file_path) {
-
     if (strlen(file_path) >= 4096) {
         return -1;
     }
