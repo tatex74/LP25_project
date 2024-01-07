@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
 
     // Check directories
     if (!directory_exists(my_config.source) || !directory_exists(my_config.destination)) {
-        printf("Either source or destination directory do not exist\nAborting\n");
+        fprintf(stderr, "Either source or destination directory do not exist\nAborting\n");
         return -1;
     }
     // Is destination writable?
     if (!is_directory_writable(my_config.destination)) {
-        printf("Destination directory %s is not writable\n", my_config.destination);
+        fprintf(stderr, "Destination directory %s is not writable\n", my_config.destination);
         return -1;
     }
     

@@ -8,7 +8,6 @@
 #include <sync.h>
 #include <string.h>
 #include <errno.h>
-#include <signal.h>
 
 /*!
  * @brief prepare prepares (only when parallel is enabled) the processes used for the synchronization.
@@ -28,8 +27,18 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
             fprintf(stderr, "Error while creating msgqueue\n");
             return -1;
         }
+
         p_context->processes_count = 0;
         p_context->main_process_pid = getpid();
+        p_context->source_lister_pid = 0;
+        p_context->destination_lister_pid = 0;
+        p_context->source_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
+        p_context->destination_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
+        for (int i=0; i<(the_config->processes_count-2)/2; i++) {
+            p_context->source_analyzers_pids[i] = 0;
+            p_context->destination_analyzers_pids[i] = 0;
+        }
+
 
         lister_configuration_t src_lister_parameters;
         src_lister_parameters.analyzers_count = (the_config->processes_count-2)/2;
@@ -37,6 +46,11 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         src_lister_parameters.my_receiver_id = MSG_TYPE_TO_SOURCE_LISTER;
         src_lister_parameters.mq_key = p_context->shared_key;
         p_context->source_lister_pid = make_process(p_context, lister_process_loop, &src_lister_parameters);
+        if (p_context->source_lister_pid == -1) {
+            p_context->source_lister_pid = 0;
+            clean_processes(the_config, p_context);
+            return -1;
+        }
 
         lister_configuration_t dst_lister_parameters;
         dst_lister_parameters.analyzers_count = (the_config->processes_count-2)/2;
@@ -44,15 +58,24 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         dst_lister_parameters.my_receiver_id = MSG_TYPE_TO_DESTINATION_LISTER;
         dst_lister_parameters.mq_key = p_context->shared_key;
         p_context->destination_lister_pid = make_process(p_context, lister_process_loop, &dst_lister_parameters);
+        if (p_context->destination_lister_pid == -1) {
+            p_context->destination_lister_pid = 0;
+            clean_processes(the_config, p_context);
+            return -1;
+        }
 
         analyzer_configuration_t src_analyser_parameters;
         src_analyser_parameters.my_recipient_id = MSG_TYPE_TO_SOURCE_LISTER;
         src_analyser_parameters.my_receiver_id = MSG_TYPE_TO_SOURCE_ANALYZERS;
         src_analyser_parameters.mq_key = p_context->shared_key;
         src_analyser_parameters.use_md5 = the_config->uses_md5;   
-        p_context->source_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
         for (int i=0; i<(the_config->processes_count-2)/2; i++) {
             p_context->source_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, &src_analyser_parameters);
+            if (p_context->source_analyzers_pids[i] == -1) {
+                p_context->source_analyzers_pids[i] = 0;
+                clean_processes(the_config, p_context);
+                return -1;
+            }
         }
 
         analyzer_configuration_t dst_analyser_parameters;
@@ -60,9 +83,13 @@ int prepare(configuration_t *the_config, process_context_t *p_context) {
         dst_analyser_parameters.my_receiver_id = MSG_TYPE_TO_DESTINATION_ANALYZERS;
         dst_analyser_parameters.mq_key = p_context->shared_key;
         dst_analyser_parameters.use_md5 = the_config->uses_md5;   
-        p_context->destination_analyzers_pids = (pid_t*) malloc(sizeof(pid_t)*(the_config->processes_count-2)/2);
         for (int i=0; i<(the_config->processes_count-2)/2; i++) {
             p_context->destination_analyzers_pids[i] = make_process(p_context, analyzer_process_loop, &dst_analyser_parameters);
+            if (p_context->destination_analyzers_pids[i] == -1) {
+                p_context->destination_analyzers_pids[i] = 0;
+                clean_processes(the_config, p_context);
+                return -1;
+            }
         }
     }
 
@@ -81,11 +108,12 @@ int make_process(process_context_t *p_context, process_loop_t func, void *parame
 
     if (pid == 0) {
         func(parameters);
-        fprintf(stderr, "Error : process return");
-        return -1;
+        exit(EXIT_FAILURE);
     }
     else {
-        p_context->processes_count++;
+        if (pid != -1) {
+            p_context->processes_count++;
+        }
         return pid;
     }
 }
@@ -197,21 +225,54 @@ void clean_processes(configuration_t *the_config, process_context_t *p_context) 
         return;
     }
 
-    send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_LISTER);
-    send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_LISTER);
+    any_message_t message;
 
-    for (int i = 0; i < (p_context->processes_count-2)/2; i++) {
-        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_ANALYZERS);
-        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_ANALYZERS);
+    if (p_context->source_lister_pid != 0) {
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_LISTER);
+        msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+        if (message.simple_command.message != COMMAND_CODE_TERMINATE_OK) {
+            fprintf(stderr, "Error : Unable to terminate process with pid %d\n", p_context->source_lister_pid);
+        }
+        p_context->processes_count--;
     }
 
-    any_message_t message;
-    for (int i = 0; i < p_context->processes_count; i++) {
+    if (p_context->destination_lister_pid != 0) {
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_LISTER);
         msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+        if (message.simple_command.message != COMMAND_CODE_TERMINATE_OK) {
+            fprintf(stderr, "Error : Unable to terminate process with pid %d\n", p_context->destination_lister_pid);
+        }
+        p_context->processes_count--;
+    }
+    
+    int i = 0;
+    while (p_context->source_analyzers_pids[i] != 0) {
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_SOURCE_ANALYZERS);
+        msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+        if (message.simple_command.message != COMMAND_CODE_TERMINATE_OK) {
+            fprintf(stderr, "Error : Unable to terminate process with pid %d\n", p_context->source_analyzers_pids[i]);
+        }
+        p_context->processes_count--;
+        i++;
+    }
+
+    i = 0;
+    while (p_context->destination_analyzers_pids[i] != 0) {
+        send_terminate_command(p_context->message_queue_id, MSG_TYPE_TO_DESTINATION_ANALYZERS);
+        msgrcv(p_context->message_queue_id, &message, sizeof(any_message_t) - sizeof(long), MSG_TYPE_TO_MAIN, 0);
+        if (message.simple_command.message != COMMAND_CODE_TERMINATE_OK) {
+            fprintf(stderr, "Error : Unable to terminate process with pid %d\n", p_context->destination_analyzers_pids[i]);
+        }
+        p_context->processes_count--;
+        i++;
     }
     
     free(p_context->source_analyzers_pids);
     free(p_context->destination_analyzers_pids);
+
+    if (p_context->processes_count != 0) {
+        fprintf(stderr, "Error : Not all processes are terminate\n");
+    }
 
     if (msgctl(p_context->message_queue_id, IPC_RMID, NULL) == -1) {
         fprintf(stderr, "Error in removing message queue\n");

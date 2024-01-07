@@ -50,10 +50,11 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
 		{.name="dry-run",.has_arg=0,.flag=0,.val='r'},
         {.name="source",.has_arg=1,.flag=0,.val='s'},
 		{.name="destination",.has_arg=1,.flag=0,.val='d'},
+        {.name="help",.has_arg=0,.flag=0,.val='h'},
 		{.name=0,.has_arg=0,.flag=0,.val=0},
 	};
     
-	while((opt = getopt_long(argc, argv, "s:d:n:v", long_opts, NULL)) != -1) {
+	while((opt = getopt_long(argc, argv, "s:d:n:vh", long_opts, NULL)) != -1) {
 		switch (opt) {
 			case 'o':
                 the_config->uses_md5 = false;
@@ -88,6 +89,11 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
             case 'v':
                 the_config->verbose = true;
                 break;            
+
+            case 'h':
+                display_help(argv[0]);
+                exit(EXIT_SUCCESS);
+                break;
 
             default:
                 display_help(argv[0]);
