@@ -196,7 +196,7 @@ void analyzer_process_loop(void *parameters) {
     int mq_id = msgget(config->mq_key, 0666);
 
     do {
-        if(msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0) != -1) {
+        if (msgrcv(mq_id, &message, sizeof(any_message_t) - sizeof(long), config->my_receiver_id, 0) != -1) {
             if (message.analyze_file_command.op_code == COMMAND_CODE_ANALYZE_FILE) {
                 get_file_stats(&message.analyze_file_command.payload);
                 send_analyze_file_response(mq_id, config->my_recipient_id, &message.analyze_file_command.payload);
