@@ -31,11 +31,11 @@ int get_file_stats(files_list_entry_t *entry) {
 
     struct stat file_stats;
 
-    if(stat(entry->path_and_name, &file_stats)==-1){
+    if (stat(entry->path_and_name, &file_stats) == -1){
         return -1;
     }
 
-    if(S_ISREG(file_stats.st_mode)){
+    if (S_ISREG(file_stats.st_mode)){
         entry->entry_type = FICHIER;
         entry->mode = file_stats.st_mode;
         entry->mtime.tv_nsec = file_stats.st_mtim.tv_nsec;
@@ -47,7 +47,7 @@ int get_file_stats(files_list_entry_t *entry) {
             return -1;
             }
             
-    }else if(S_ISDIR(file_stats.st_mode)){
+    }else if (S_ISDIR(file_stats.st_mode)){
         entry->entry_type = DOSSIER;
         entry->mode = file_stats.st_mode;
         
@@ -115,7 +115,7 @@ int compute_file_md5(files_list_entry_t *entry) {
  * @return true if directory exists, false else
  */
 bool directory_exists(char *path_to_dir) {
-	if (path_to_dir==NULL){
+	if (path_to_dir == NULL){
 		return false;
     	}
 
