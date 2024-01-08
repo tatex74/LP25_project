@@ -57,48 +57,48 @@ int set_configuration(configuration_t *the_config, int argc, char *argv[]) {
 	while ((opt = getopt_long(argc, argv, "s:d:n:vh", long_opts, NULL)) != -1) {
 		switch (opt) {
 			case 'o':
-                           the_config->uses_md5 = false;
-			   break;
+                the_config->uses_md5 = false;
+			    break;
 				
 			case 'p':
-                           the_config->is_parallel = false;
-			   break;
+                the_config->is_parallel = false;
+			    break;
 				
-                        case 'r':
-                           the_config->dry_run = true;
-			   break;
+            case 'r':
+                the_config->dry_run = true;
+			    break;
 			
-                        case 's':
-                           strcpy(the_config->source, optarg);
-			   break;
+            case 's':
+                strcpy(the_config->source, optarg);
+			    break;
 				
 			case 'd':
-                           strcpy(the_config->destination, optarg);
-			   break;
+                strcpy(the_config->destination, optarg);
+			    break;
 
-                        case 'n':
-                           the_config->processes_count = atoi(optarg);
-                           if (the_config->processes_count < 4) {
-                               the_config->processes_count = 4;
-                           }
-                           if (the_config->processes_count%2 == 1) {
-                               the_config->processes_count--;
-                           }
-                           break;
+            case 'n':
+                the_config->processes_count = atoi(optarg);
+                if (the_config->processes_count < 4) {
+                    the_config->processes_count = 4;
+                }
+                if (the_config->processes_count%2 == 1) {
+                    the_config->processes_count--;
+                }
+                break;
 
-                        case 'v':
-                           the_config->verbose = true;
-                           break;            
+            case 'v':
+                the_config->verbose = true;
+                break;            
 
-                        case 'h':
-                           display_help(argv[0]);
-                           exit(EXIT_SUCCESS);
-                           break;
+            case 'h':
+                display_help(argv[0]);
+                exit(EXIT_SUCCESS);
+                break;
 
-                        default:
-                           display_help(argv[0]);
-                           return -1;
-		        }
+            default:
+                display_help(argv[0]);
+                return -1;
+        }
 	}
 
     if (strcmp(the_config->source, "") == 0 || strcmp(the_config->destination, "") == 0) {
