@@ -40,13 +40,14 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
 
     files_list_entry_t *src_entry = source_list.head;
     files_list_entry_t *dest_entry = NULL;
-    files_list_entry_t new_entry;
+    files_list_entry_t *new_entry;
         
     while (src_entry != NULL) {
         dest_entry = find_entry_by_name(&dest_list, src_entry->path_and_name, strlen(the_config->source), strlen(the_config->destination));
         if (dest_entry == NULL || mismatch(src_entry, dest_entry, the_config->uses_md5) == true) {
-            memcpy(&new_entry, src_entry, sizeof(files_list_entry_t));
-            add_entry_to_tail(&diff_list, &new_entry);
+            new_entry = (files_list_entry_t*) malloc(sizeof(files_list_entry_t));
+            memcpy(new_entry, src_entry, sizeof(files_list_entry_t));
+            add_entry_to_tail(&diff_list, new_entry);
         }
         src_entry = src_entry->next;
     }
@@ -66,7 +67,6 @@ void synchronize(configuration_t *the_config, process_context_t *p_context) {
         p_diff = p_diff->next;
     }
 
-    
     clear_files_list(&source_list);
     clear_files_list(&dest_list);
     clear_files_list(&diff_list);
